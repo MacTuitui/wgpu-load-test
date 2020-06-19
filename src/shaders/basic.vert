@@ -139,17 +139,20 @@ float noise11(float p){
     return mix(random11(fl), random11(fl + 1.0), fc);
 }
 
+float n(vec3 p, float s, float n4) {
+    return snoise(vec4(p*s, n4));
+}
 
 vec2 bigf(vec3 p) {
 
-    //float n_s = n(p, 0.1,1.0)*0.5+0.5;
-    //float n_s = snoise(vec4(p*0.1,1.0))*0.5+0.5;
-    float n_o = snoise(vec4(p,uniforms.costime*0.1))*0.5+0.5;
+    float orig_r = length(p);//should be 1
+    float n_s = n(p, 0.1,1.0)*0.5+0.5;
+    float n_o = n(p, 0.5+n_s,uniforms.costime*0.1)*0.5+0.5;
     float stripe_noise = floor(n_o*10.0)/10.0;
     stripe_noise = random11(stripe_noise)*0.4;
-    float n_o2 = snoise(vec4(p* 0.3,uniforms.sintime))*0.5+0.5;
+    float n_o2 = n(p, 0.3,uniforms.sintime)*0.5+0.5;
     float stripe_noise2 = pow(n_o2,2.0)*0.5;//floor(n_o2*3.0)/3.0;
-    float d = (snoise(vec4(p*10.0,0.0))*0.5+0.5)*0.03;
+    float d = (n(p,10.0,0.0)*0.5+0.5)*0.03;
     return vec2(d+stripe_noise+stripe_noise2, (stripe_noise)*5.0);
 }
 

@@ -189,11 +189,12 @@ impl State {
 
         //describe the swapchain
         //a swapchain will be presented to the surface it's linked to
-        //so we'll use a texture output in bgra8unorm
+        //so we'll use a texture output in bgra8unorm??? see what nannou does
         //in fifo mode (v-sync, capped)
         let sc_desc = wgpu::SwapChainDescriptor {
             usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
-            format: wgpu::TextureFormat::Bgra8Unorm,
+            //format: wgpu::TextureFormat::Bgra8Unorm,
+            format: wgpu::TextureFormat::Bgra8UnormSrgb,
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,
