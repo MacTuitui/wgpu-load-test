@@ -1,0 +1,55 @@
+#version 450
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 0) buffer in_buf {
+    float[] in_data;
+}; 
+layout(set = 0, binding = 1) buffer out_buf {
+    float[] out_data;
+}; 
+//for convenience
+#define I(a, b) (a)*1024+(b)
+
+void main() {
+    uint x = gl_GlobalInvocationID.x;
+    uint y = gl_GlobalInvocationID.y;
+    //uint x = int(index/1024);
+    //uint y = index-x*1024;
+    uint neighbors = 0;
+    uint xm = x-1;
+    uint ym = y-1;
+    if (x == 0) xm = 1023;
+    if (y == 0) ym = 1023;
+    uint xp = x+1;
+    uint yp = y+1;
+    if (x == 1023) xp = 0;
+    if (y == 1023) yp = 0;
+    float res = 0.0;
+    
+    /*float kernel[9] = float[](
+            1.0 / 16, 2.0 / 16, 1.0 / 16,
+            2.0 / 16, 3.0 / 16, 2.0 / 16,
+            1.0 / 16, 2.0 / 16, 1.0 / 16
+            );
+    res+= kernel[0]*in_data[I(xm,ym)];
+    res+= kernel[1]*in_data[I(x ,ym)];
+    res+= kernel[2]*in_data[I(xp,ym)];
+    res+= kernel[3]*in_data[I(xm,y)];
+    res+= kernel[4]*in_data[I(x ,y)];
+    res+= kernel[5]*in_data[I(xp,y)];
+    res+= kernel[6]*in_data[I(xm,yp)];
+    res+= kernel[7]*in_data[I(x ,yp)];
+    res+= kernel[8]*in_data[I(xp,yp)];
+    */
+    res+= in_data[I(xm,ym)];
+    res+= in_data[I(x ,ym)];
+    res+= in_data[I(xp,ym)];
+    res+= in_data[I(xm,y)];
+    res+= in_data[I(x ,y)];
+    res+= in_data[I(xp,y)];
+    res+= in_data[I(xm,yp)];
+    res+= in_data[I(x ,yp)];
+    res+= in_data[I(xp,yp)];
+    out_data[I(x,y)]=res/9.0*0.05;
+    //out_data[I(x,y)]=in_data[I(x,y)]*2.0;
+}

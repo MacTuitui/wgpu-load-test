@@ -1,0 +1,95 @@
+#version 450
+layout(local_size_x = 64) in;
+
+//what do we have here
+//the previous trails
+layout(set = 0, binding = 0) buffer in_buf {
+    float[] in_data;
+}; 
+//the one where we add the new ones (might be some races going on here tbh)
+layout(set = 0, binding = 1) buffer out_buf {
+    float[] out_data;
+}; 
+//our (x,y,angle, free) array of particles
+layout(set = 0, binding = 2) buffer parts {
+    vec4[] particles;
+}; 
+
+//for convenience
+#define I(a, b) (a)*1024+(b)
+#define TAU 6.283185307179586
+
+float rand21 (vec2 st) {
+    return fract(sin(dot(st.xy,vec2(12.9898,78.233)))*43758.5453123);
+}
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    //where are we
+    vec2 pos = particles[index].xy;
+    float angle = particles[index].z*TAU;
+
+    //nice values at
+    //pulsar
+    //float angle_side = TAU/4.0;//0.5;
+    //float angle_turn = angle_side/5;
+    //float range = 0.005;//*max(0.0,(1.0-2.0*r));
+    //float step_length = 0.001;//0.00031+range*0.27 ;//0.0151;
+
+    //hanabi
+    //float angle_side = TAU/5.0;//0.5;
+    //float angle_turn = angle_side/2;
+    //float range = 0.004;//*max(0.0,(1.0-2.0*r));
+    //float step_length = 0.001;//0.00031+range*0.27 ;//0.0151;
+
+    float r = min(1.0,length(pos-vec2(0.5))*1.5);
+
+    float angle_side = TAU/4.0*(1.0-r)+r*(TAU/8.0);//0.5;
+    float angle_turn = angle_side*1.05;
+    float range = 0.005;//max(0.001,0.01*(1.0-2.0*r));
+    float step_length =0.002;// max(0.0001,0.1*range);//+0.0011;//0.00031+range*0.27 ;//0.0151;
+
+    //look on both sides
+    float a0 = angle - angle_side ;
+    float a1 = angle;
+    float a2 = angle + angle_side;
+    vec2 pos0 = pos+vec2(cos(a0),sin(a0))*range;
+    vec2 pos1 = pos+vec2(cos(a1),sin(a1))*range;
+    vec2 pos2 = pos+vec2(cos(a2),sin(a2))*range;
+    pos0 = fract(pos0);
+    pos1 = fract(pos1);
+    pos2 = fract(pos2);
+
+    uint x0 = int(pos0.x*1024.0);
+    uint y0 = int(pos0.y*1024.0);
+    float v0 = in_data[I(x0,y0)];
+    uint x1 = int(pos1.x*1024.0);
+    uint y1 = int(pos1.y*1024.0);
+    float v1 = in_data[I(x1,y1)];
+    uint x2 = int(pos2.x*1024.0);
+    uint y2 = int(pos2.y*1024.0);
+    float v2 = in_data[I(x2,y2)];
+
+    //decide where to go
+    if ((v0 > v1) && (v1 > v2)){
+        angle -= angle_turn;
+    } else if ((v2 > v1) && (v1 > v0)) {
+        angle += angle_turn;
+    } else if ((v2 > v1) && (v0 > v1)){
+        if (rand21(pos) > 0.5) {
+            angle+= angle_turn;
+        } else {
+            angle-= angle_turn;
+        }
+    }
+
+    //move
+    pos += vec2(cos(angle), sin(angle))*step_length;
+    pos = fract(pos);
+
+    //put the data back
+    particles[index].xy = pos;
+    particles[index].z = angle/TAU;
+    uint x = int(pos.x*1024.0);
+    uint y = int(pos.y*1024.0);
+   out_data[I(x,y)] += 0.1;
+}
