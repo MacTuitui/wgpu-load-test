@@ -7,6 +7,7 @@ use winit::{
 use std::path::Path;
 use futures::executor::block_on;
 use rand::Rng;
+use std::time::Instant;
 
 const TAU:f32 = 6.283185307179586;
 
@@ -94,6 +95,7 @@ struct State {
     compute_pipeline_layout: wgpu::PipelineLayout,
     compute_pipeline_blur: wgpu::ComputePipeline,
     render_pipeline_from_buff: wgpu::RenderPipeline,
+    last_hundred_frames: Instant,
 }
 
 pub fn shader_from_spirv(device: &wgpu::Device, path: &Path) -> wgpu::ShaderModule {
@@ -145,7 +147,7 @@ impl State {
             format: wgpu::TextureFormat::Bgra8UnormSrgb,
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::Fifo,
+            present_mode: wgpu::PresentMode::Immediate,
         };
         //get the swap_chain!
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
@@ -455,6 +457,7 @@ impl State {
         });
  
 
+        let last_hundred_frames = Instant::now();
         //return the State
         Self {
             surface,
@@ -481,6 +484,8 @@ impl State {
             compute_pipeline_layout:pipeline_layout,
             compute_pipeline_blur,
             render_pipeline_from_buff,
+            last_hundred_frames,
+
         }
     }
 
@@ -588,8 +593,13 @@ impl State {
               render_pass.draw_indexed(0..6,0, 0..1); 
           }
         self.queue.submit(&[ encoder.finish() ]);
-        //done
         self.frames+=1;
+        if self.frames%100 == 0 {
+            let diff = self.last_hundred_frames.elapsed().as_millis() as u64;
+            println!("FPS (over the last 100): {}", 100.0*1000.0/diff as f32);
+            self.last_hundred_frames=Instant::now();
+        }
+        //done
     }
 }
 

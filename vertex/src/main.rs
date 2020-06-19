@@ -6,6 +6,7 @@ use winit::{
 };
 use futures::executor::block_on;
 use cgmath::{Matrix4, Point3, Deg, Vector3};
+use std::time::Instant;
 
 mod icosphere;
 use icosphere::IcoSphere;
@@ -145,7 +146,8 @@ struct State {
     sphere: IcoSphere,
     uniforms: Uniforms,
     uniforms_buffer: wgpu::Buffer,
-    frames:u32,
+    frames:u64,
+    last_hundred_frames: Instant,
 }
 
 pub fn shader_from_spirv_bytes(device: &wgpu::Device, bytes: &[u8]) -> wgpu::ShaderModule {
@@ -197,7 +199,7 @@ impl State {
             format: wgpu::TextureFormat::Bgra8UnormSrgb,
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::Fifo,
+            present_mode: wgpu::PresentMode::Immediate,
         };
         //get the swap_chain!
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
@@ -343,6 +345,8 @@ impl State {
         sphere.make_geometry(10,false);
         sphere.make_buffers(&device, 10.0);
 
+        let last_hundred_frames = Instant::now();
+
         //return the State
         Self {
             surface,
@@ -359,6 +363,7 @@ impl State {
             uniforms,
             uniforms_buffer,
             frames: 0,
+            last_hundred_frames,
         }
     }
 
@@ -491,8 +496,14 @@ impl State {
         }
 
         self.queue.submit(&[ encoder.finish() ]);
-        //done
         self.frames+=1;
+        if self.frames%100 == 0 {
+            let diff = self.last_hundred_frames.elapsed().as_millis() as u64;
+            println!("FPS (over the last 100): {}", 100.0*1000.0/diff as f32);
+            self.last_hundred_frames=Instant::now();
+        }
+        //done
+        
     }
 }
 
