@@ -3,11 +3,11 @@ layout(local_size_x = 64) in;
 
 //what do we have here
 //the previous trails
-layout(set = 0, binding = 0) buffer in_buf {
+layout(set = 0, binding = 0) readonly buffer in_buf {
     float[] in_data;
 }; 
 //the one where we add the new ones (might be some races going on here tbh)
-layout(set = 0, binding = 1) buffer out_buf {
+layout(set = 0, binding = 1) writeonly buffer out_buf {
     float[] out_data;
 }; 
 //our (x,y,angle, free) array of particles
@@ -91,5 +91,5 @@ void main() {
     particles[index].z = angle/TAU;
     uint x = int(pos.x*1024.0);
     uint y = int(pos.y*1024.0);
-   out_data[I(x,y)] += 0.1;
+    out_data[I(x,y)] += 0.1;
 }

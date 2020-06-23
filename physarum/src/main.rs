@@ -223,17 +223,27 @@ impl State {
         rand_data.push(0.8);
     }
     let buffer_data = rand_data.iter().map(|p| *p).collect::<Vec<_>>();
-    let buffer_size = rand_data.len() * std::mem::size_of::<f32>();
+    let buffer_size = (rand_data.len() * std::mem::size_of::<f32>()) as u64;
 
-        let buffer_a = device.create_buffer_with_data(
-            bytemuck::cast_slice(&buffer_data),
-            wgpu::BufferUsage::STORAGE_READ | wgpu::BufferUsage::STORAGE | wgpu::BufferUsage::COPY_SRC,
+    let dummy_buffer_a = device.create_buffer_with_data(
+        bytemuck::cast_slice(&buffer_data),
+        wgpu::BufferUsage::COPY_SRC,
         );
-        let buffer_b = device.create_buffer_with_data(
-            bytemuck::cast_slice(&buffer_data),
-            wgpu::BufferUsage::STORAGE_READ | wgpu::BufferUsage::STORAGE | wgpu::BufferUsage::COPY_DST,
+    let dummy_buffer_b = device.create_buffer_with_data(
+        bytemuck::cast_slice(&buffer_data),
+        wgpu::BufferUsage::COPY_SRC,
         );
 
+            let buffer_a = device.create_buffer(&wgpu::BufferDescriptor{
+                size: buffer_size,
+                usage: wgpu::BufferUsage::STORAGE | wgpu::BufferUsage::STORAGE_READ | wgpu::BufferUsage::COPY_DST | wgpu::BufferUsage::COPY_SRC,
+                label: Some("Create a"),
+            });
+            let buffer_b = device.create_buffer(&wgpu::BufferDescriptor{
+                size: buffer_size,
+                usage: wgpu::BufferUsage::STORAGE | wgpu::BufferUsage::STORAGE_READ | wgpu::BufferUsage::COPY_DST | wgpu::BufferUsage::COPY_SRC,
+                label: Some("Create b"),
+            });
 
     let zero_buffer_size = 1024*1024 * std::mem::size_of::<f32>();
 
@@ -251,13 +261,44 @@ impl State {
     }
 
     let particles_buffer_data = particles.pos.iter().map(|p| *p).collect::<Vec<_>>();
-    let particles_buffer_size = particles_buffer_data.len() * std::mem::size_of::<[f32;4] >();
+    let particles_buffer_size = (particles_buffer_data.len() * std::mem::size_of::<[f32;4] >()) as u64;
 
-    let particles_buffer = device.create_buffer_with_data(
+    let dummy_particles_buffer = device.create_buffer_with_data(
         bytemuck::cast_slice(&particles_buffer_data),
-        wgpu::BufferUsage::STORAGE_READ | wgpu::BufferUsage::STORAGE
+        wgpu::BufferUsage::COPY_SRC,
     );
+            let particles_buffer = device.create_buffer(&wgpu::BufferDescriptor{
+                size: particles_buffer_size,
+                usage: wgpu::BufferUsage::STORAGE | wgpu::BufferUsage::STORAGE_READ | wgpu::BufferUsage::COPY_DST | wgpu::BufferUsage::COPY_SRC,
+                label: Some("Create particles"),
+            });
 
+            let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor{
+                label: Some("copy actual buffers encoder"),
+            });
+            encoder.copy_buffer_to_buffer(
+                &dummy_buffer_a,
+                0,
+                &buffer_a,
+                0,
+                buffer_size 
+            );
+            encoder.copy_buffer_to_buffer(
+                &dummy_buffer_b,
+                0,
+                &buffer_b,
+                0,
+                buffer_size 
+            );
+            encoder.copy_buffer_to_buffer(
+                &dummy_particles_buffer,
+                0,
+                &particles_buffer,
+                0,
+                particles_buffer_size 
+            );
+            let commands = encoder.finish();
+            queue.submit(&[commands]);
     //the first compute pass will work with a,b and the particles
     let compute_bind_group_a = device.create_bind_group(&wgpu::BindGroupDescriptor {
         layout: &compute_bind_group_layout,
